@@ -440,10 +440,14 @@ jobs:
       - name: Copy Server Folder
         run: |
           $source_server_folder = "msojocs-patch/server/file"
-          $destination_server_folder = "FE/resources/app/out"
+          $destination_server_folder = "FE/resources/app/out/file"
 
           if (Test-Path $source_server_folder) {
-            Copy-Item -Path $source_server_folder -Destination $destination_server_folder -Recurse
+            New-Item -ItemType Directory -Path $destination_server_folder -Force | Out-Null
+            Copy-Item -Path "$source_server_folder/*" -Destination $destination_server_folder -Recurse -Force
+            if (-not (Test-Path "$destination_server_folder/identity.getfiddler.com/oauth/token.json" -PathType Leaf)) {
+              throw "Required token.json missing after copying server files"
+            }
           } else {
             Write-Host "Source Server Folder not found"
           }
