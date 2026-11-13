@@ -437,10 +437,19 @@ jobs:
             Write-Host "Yui-patch Folder not found"
           }
 
+      - name: Locate application output directory
+        run: |
+          $candidates = @("FE/resources/app/out", "FE/resources/app.asar.unpacked/out")
+          $appOut = $candidates | Where-Object { Test-Path "$_/main.js" -PathType Leaf } | Select-Object -First 1
+          if (-not $appOut) {
+            throw "Cannot locate application main.js in supported resource directories"
+          }
+          "FE_APP_OUT=$appOut" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Copy Server Folder
         run: |
           $source_server_folder = "msojocs-patch/server/file"
-          $destination_server_folder = "FE/resources/app/out/file"
+          $destination_server_folder = "$env:FE_APP_OUT/file"
 
           if (Test-Path $source_server_folder) {
             New-Item -ItemType Directory -Path $destination_server_folder -Force | Out-Null
@@ -456,7 +465,7 @@ jobs:
         if: startsWith(env.PATCH_LANGUAGE, 'Yes')
         run: |
           $translate_js = "msojocs-patch/server/translate.js"
-          $dest_translate = "FE/resources/app/out/translate.js"
+          $dest_translate = "$env:FE_APP_OUT/translate.js"
 
           if (Test-Path $translate_js) {
             Copy-Item -Path $translate_js -Destination $dest_translate -Force
@@ -480,7 +489,7 @@ jobs:
 
       - name: Set user credentials
         run: |
-          $source_json = "FE/resources/app/out/file/identity.getfiddler.com/oauth/token.json"
+          $source_json = "$env:FE_APP_OUT/file/identity.getfiddler.com/oauth/token.json"
           $main_content = Get-Content -Path $source_json -Raw | ConvertFrom-Json
 
           $main_content.user_info.email = $env:PATCH_USER_EMAIL
@@ -493,10 +502,10 @@ jobs:
 
       - name: Patch main.js to main.original.js
         run: |
-          $source_main = "FE/resources/app/out/main.js"
+          $source_main = "$env:FE_APP_OUT/main.js"
           $main_content = Get-Content -Path $source_main -Raw
 
-          $new_main = "FE/resources/app/out/main.original.js"
+          $new_main = "$env:FE_APP_OUT/main.original.js"
 
           $source_index = "msojocs-patch/server/index.js"
           $index_content = Get-Content -Path $source_index -Raw
